@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     if (!apiKey) throw new Error("API Key Missing on Server");
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     const prompt = `Create a JSON quiz about "${topic}". 
     Count: ${count || 5}. Difficulty: ${difficulty || "Medium"}.
