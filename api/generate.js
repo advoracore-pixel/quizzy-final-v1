@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
     // Initialize Gemini (1.5 Flash is best for speed + images)
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // --- PROMPT ENGINEERING ---
 
