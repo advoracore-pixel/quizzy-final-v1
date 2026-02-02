@@ -14,11 +14,8 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) throw new Error("API Key Missing on Server");
-
-    // Initialize Gemini (1.5 Flash is best for speed + images)
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-
+    
     // --- PROMPT ENGINEERING ---
 
     // A. Common Rules (Updated for Subject & Topic)
@@ -100,32 +97,47 @@ export default async function handler(req, res) {
         }
       };
     }
+  // --- GENERATION WITH FAILOVER ---
+    let response;
+    const modelsToTry = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
+    let lastError;
 
-    // --- GENERATION ---
-    let result;
-    if (imagePart) {
-        result = await model.generateContent([finalPrompt, imagePart]);
-    } else {
-        result = await model.generateContent(finalPrompt);
+    for (const modelName of modelsToTry) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        let result;
+        if (imagePart) {
+          result = await model.generateContent([finalPrompt, imagePart]);
+        } else {
+          result = await model.generateContent(finalPrompt);
+        }
+        response = await result.response;
+        if (response) break;
+      } catch (err) {
+        lastError = err;
+        console.error(`Model ${modelName} failed`);
+        continue;
+      }
     }
 
-    // --- PROCESSING RESPONSE ---
-    const response = await result.response;
-    let text = response.text();
+    if (!response) throw lastError;
 
-    // Cleaning Markdown
+    // --- PROCESSING RESPONSE ---
+    let text = response.text();
     text = text.replace(/```json|```/g, '').trim();
 
-    const jsonResponse = JSON.parse(text);
-
-    return res.status(200).json(jsonResponse);
+    try {
+      const jsonStart = text.indexOf('{');
+      const jsonEnd = text.lastIndexOf('}') + 1;
+      const cleanJson = text.substring(jsonStart, jsonEnd);
+      const jsonResponse = JSON.parse(cleanJson);
+      return res.status(200).json(jsonResponse);
+    } catch (parseError) {
+      throw new Error("No Valid json found");
+    }
 
   } catch (error) {
     console.error("API Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+    return res.status(500).json({ success: false, error: error.message });
   }
-}
-  
+  }
