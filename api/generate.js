@@ -47,25 +47,27 @@ export default async function handler(req, res) {
     1. Return ONLY valid JSON. No Markdown, no backticks, no intro text.
     2. JSON Structure:
        {
-         "subject": "Broad Academic or Practical Category (e.g., Physics, History, Coding, General Knowledge)",
-         "topicName": "Specific, concise title based on content (e.g., Newton's Laws, World War II)",
+         "subject": "Category in ${config.language}",
+         "topicName": "Title in ${config.language}",
          "questions": [
            {
              "id": 1,
-             "question": "Question text...",
+             "question": "Question text in ${config.language}...",
              "options": ["Option A", "Option B", "Option C", "Option D"],
-             "answer": 0, // MUST be an Integer Index (0, 1, 2, or 3) pointing to correct option
-             "explanation": "Brief reason why."
+             "answer": 0, // MUST be an Integer Index (0, 1, 2, or 3)
+             "explanation": "Brief reason in ${config.language}."
            }
          ]
        }
     3. QUESTION STYLE RULES:
        ${typeInstructions}
-    4. **Ensure exactly 4 options per question.** (This is mandatory for ALL types, including Mixed).
+    4. **Ensure exactly 4 options per question.** (Mandatory).
     5. "answer" must be a NUMBER (index), NOT a string.
-    6. Difficulty: ${config.difficulty}, Language: ${config.language}, Count: ${config.count}.
+    6. **LANGUAGE ENFORCEMENT:** - The Target Language is: **${config.language}**.
+       - You MUST translate/generate ALL text (Questions, Options, Explanations) in **${config.language}**, even if the source content provided is in English.
+       - Do not mix languages (e.g., don't use Hinglish unless requested).
+    7. Difficulty: ${config.difficulty}, Count: ${config.count}.
     `;
-
 
     // B. Mode-Specific Prompts
     let finalPrompt = "";
