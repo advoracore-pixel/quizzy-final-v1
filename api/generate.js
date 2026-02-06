@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default async function handler(req, res) {
@@ -16,9 +17,31 @@ export default async function handler(req, res) {
     if (!apiKey) throw new Error("API Key Missing on Server");
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // --- PROMPT ENGINEERING ---
+    
+        // --- PROMPT ENGINEERING ---
 
-    // A. Common Rules (Updated for Subject & Topic)
+    let typeInstructions = "";
+
+    if (config.type === 'Mixed') {
+      typeInstructions = `
+      - **VARIETY MODE:** You MUST generate a mix of the following question styles (keeping exactly 4 options for ALL):
+        1. **Fill-in-the-Blank:** Question contains "______". Options: 4 words to fill it.
+        2. **Assertion-Reasoning:** Question: "Assertion (A): ... Reason (R): ...". Options: ["Both True", "A True R False", "A False R True", "Both False"].
+        3. **Statement Analysis:** Question: "Which of the following is INCORRECT?". Options: 4 full sentences.
+        4. **Standard MCQ:** Direct question. Options: 4 answers.
+      - **CRITICAL:** Do NOT generate 2-option True/False. Always use 4 options.
+      `;
+    } else if (config.type === 'True/False') {
+      // User wants 4 options even for T/F
+      typeInstructions = `- Format: "Identify the TRUE (or FALSE) statement." Provide exactly 4 distinct statements as options.`;
+    } else if (config.type === 'Fill Blanks') {
+      typeInstructions = `- Format: A sentence with a missing word "______". Provide exactly 4 word choices as options.`;
+    } else {
+      // Default MCQ
+      typeInstructions = `- Format: Standard Multiple Choice Question with exactly 4 options.`;
+    }
+
+    // A. Common Rules (Output Structure Remains Identical)
     const COMMON_RULES = `
     **CRITICAL OUTPUT RULES:**
     1. Return ONLY valid JSON. No Markdown, no backticks, no intro text.
@@ -36,10 +59,13 @@ export default async function handler(req, res) {
            }
          ]
        }
-    3. Ensure exactly 4 options per question.
-    4. "answer" must be a NUMBER (index), NOT a string.
-    5. Difficulty: ${config.difficulty}, Language: ${config.language}, Count: ${config.count}, Type: ${config.type}.
+    3. QUESTION STYLE RULES:
+       ${typeInstructions}
+    4. **Ensure exactly 4 options per question.** (This is mandatory for ALL types, including Mixed).
+    5. "answer" must be a NUMBER (index), NOT a string.
+    6. Difficulty: ${config.difficulty}, Language: ${config.language}, Count: ${config.count}.
     `;
+
 
     // B. Mode-Specific Prompts
     let finalPrompt = "";
