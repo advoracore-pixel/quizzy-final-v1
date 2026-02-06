@@ -42,18 +42,19 @@ export default async function handler(req, res) {
     }
 
     // A. Common Rules (Output Structure Remains Identical)
+        // A. Common Rules (Updated: English Titles + Native Content)
     const COMMON_RULES = `
     **CRITICAL OUTPUT RULES:**
     1. Return ONLY valid JSON. No Markdown, no backticks, no intro text.
     2. JSON Structure:
        {
-         "subject": "Category in ${config.language}",
-         "topicName": "Title in ${config.language}",
+         "subject": "Broad Category (MUST BE IN ENGLISH, e.g., Physics, History)", 
+         "topicName": "Specific Title (MUST BE IN ENGLISH, e.g., Newton's Laws)",
          "questions": [
            {
              "id": 1,
              "question": "Question text in ${config.language}...",
-             "options": ["Option A", "Option B", "Option C", "Option D"],
+             "options": ["Option A", "Option B", "Option C", "Option D"], // Text in ${config.language}
              "answer": 0, // MUST be an Integer Index (0, 1, 2, or 3)
              "explanation": "Brief reason in ${config.language}."
            }
@@ -63,11 +64,13 @@ export default async function handler(req, res) {
        ${typeInstructions}
     4. **Ensure exactly 4 options per question.** (Mandatory).
     5. "answer" must be a NUMBER (index), NOT a string.
-    6. **LANGUAGE ENFORCEMENT:** - The Target Language is: **${config.language}**.
-       - You MUST translate/generate ALL text (Questions, Options, Explanations) in **${config.language}**, even if the source content provided is in English.
-       - Do not mix languages (e.g., don't use Hinglish unless requested).
+    6. **STRICT LANGUAGE RULES:**
+       - **METADATA (subject, topicName):** You MUST write these strictly in **ENGLISH** (even if the user asked for Hindi).
+       - **CONTENT (question, options, explanation):** You MUST write these in **${config.language}**.
+       - Example: If language is "Hindi", Subject should be "Science" (English), but Question should be "Force ki unit kya hai?" (Hindi).
     7. Difficulty: ${config.difficulty}, Count: ${config.count}.
     `;
+
 
     // B. Mode-Specific Prompts
     let finalPrompt = "";
