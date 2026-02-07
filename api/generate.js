@@ -138,8 +138,7 @@ export default async function handler(req, res) {
         let result;
         
         // Safety Settings
-        const generationConfig = { responseMimeType: "application/json" };
-
+        
         if (imagePart) {
           result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: finalPrompt }, imagePart] }],
