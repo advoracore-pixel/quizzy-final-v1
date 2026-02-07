@@ -129,7 +129,7 @@ export default async function handler(req, res) {
 
     // --- GENERATION WITH FAILOVER ---
     let response;
-    const modelsToTry = ["gemini-2.5-flash-lite", "gemini-2.5-flash","Gemini-3-Flash"];
+    const modelsToTry = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
     let lastError;
 
     for (const modelName of modelsToTry) {
