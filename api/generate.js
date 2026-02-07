@@ -17,7 +17,8 @@ export default async function handler(req, res) {
     if (!apiKey) throw new Error("API Key Missing on Server");
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // --- PROMPT ENGINEERING ---
+    
+        // --- PROMPT ENGINEERING ---
 
     let typeInstructions = "";
 
@@ -31,14 +32,17 @@ export default async function handler(req, res) {
       - **CRITICAL:** Do NOT generate 2-option True/False. Always use 4 options.
       `;
     } else if (config.type === 'True/False') {
+      // User wants 4 options even for T/F
       typeInstructions = `- Format: "Identify the TRUE (or FALSE) statement." Provide exactly 4 distinct statements as options.`;
     } else if (config.type === 'Fill Blanks') {
       typeInstructions = `- Format: A sentence with a missing word "______". Provide exactly 4 word choices as options.`;
     } else {
+      // Default MCQ
       typeInstructions = `- Format: Standard Multiple Choice Question with exactly 4 options.`;
     }
 
-    
+    // A. Common Rules (Output Structure Remains Identical)
+        // A. Common Rules (Updated: English Titles + Native Content)
     const COMMON_RULES = `
     **CRITICAL OUTPUT RULES:**
     1. Return ONLY valid JSON. No Markdown, no backticks, no intro text.
@@ -46,7 +50,6 @@ export default async function handler(req, res) {
        {
          "subject": "Broad Category (MUST BE IN ENGLISH, e.g., Physics, History)", 
          "topicName": "Specific Title (MUST BE IN ENGLISH, e.g., Newton's Laws)",
-         "summary": "A short, engaging description (Max 25 words) of what the quiz covers. MUST BE IN ${config.language}. CRITICAL: Do NOT mention 'source', 'image', 'provided text', or 'file'. Just describe the academic topic directly.",
          "questions": [
            {
              "id": 1,
@@ -62,8 +65,9 @@ export default async function handler(req, res) {
     4. **Ensure exactly 4 options per question.** (Mandatory).
     5. "answer" must be a NUMBER (index), NOT a string.
     6. **STRICT LANGUAGE RULES:**
-       - **METADATA (subject, topicName):** You MUST write these strictly in **ENGLISH** (for internal categorization).
-       - **CONTENT (summary, question, options, explanation):** You MUST write these in **${config.language}**.
+       - **METADATA (subject, topicName):** You MUST write these strictly in **ENGLISH** (even if the user asked for Hindi).
+       - **CONTENT (question, options, explanation):** You MUST write these in **${config.language}**.
+       - Example: If language is "Hindi", Subject should be "Science" (English), but Question should be "Force ki unit kya hai?" (Hindi).
     7. Difficulty: ${config.difficulty}, Count: ${config.count}.
     `;
 
@@ -78,10 +82,9 @@ export default async function handler(req, res) {
       
       **Content Strategy:**
       1. Analyze the topic string to determine the 'subject' and refined 'topicName'.
-      2. Generate a 'summary' (in ${config.language}) that invites the user to take the quiz.
-      3. 70% Core Knowledge questions.
-      4. 1st question must be EASY (Confidence Booster).
-      5. Include 1 question with a humorous tone or funny options (The 'Witty' One).
+      2. 70% Core Knowledge questions.
+      3. 1st question must be EASY (Confidence Booster).
+      4. Include 1 question with a humorous tone or funny options (The 'Witty' One).
       
       ${COMMON_RULES}`;
 
@@ -93,9 +96,9 @@ export default async function handler(req, res) {
       
       **Content Strategy:**
       1. Analyze the text to infer the 'subject' and generate a catchy 'topicName'.
-      2. Generate a 'summary' (in ${config.language}) that describes the key themes of the text WITHOUT saying "based on text".
-      3. Questions must be answerable from the text.
-      4. 1st question: Giveaway/Easy.
+      2. Questions must be answerable from the text.
+      3. 1st question: Giveaway/Easy.
+      4. 1 question should test attention to detail (The 'Curveball').
       
       ${COMMON_RULES}`;
 
@@ -106,8 +109,7 @@ export default async function handler(req, res) {
       **Task:**
       1. Identify the 'subject' (e.g., if image is a circuit, subject is Physics/Electronics).
       2. Generate a relevant 'topicName' describing the image content.
-      3. Generate a 'summary' (in ${config.language}) describing the concept shown (e.g., "Test your understanding of Circuit Diagrams"). DO NOT say "This image shows...".
-      4. Extract key concepts and generate questions.
+      3. Extract key concepts and generate questions.
       
       **Content Strategy:**
       1. If diagram: Ask spatial questions.
@@ -126,8 +128,7 @@ export default async function handler(req, res) {
         }
       };
     }
-
-    // --- GENERATION WITH FAILOVER ---
+  // --- GENERATION WITH FAILOVER ---
     let response;
     const modelsToTry = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
     let lastError;
@@ -136,26 +137,16 @@ export default async function handler(req, res) {
       try {
         const model = genAI.getGenerativeModel({ model: modelName });
         let result;
-        
-        // Safety Settings
-        
         if (imagePart) {
-          result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: finalPrompt }, imagePart] }],
-            generationConfig
-          });
+          result = await model.generateContent([finalPrompt, imagePart]);
         } else {
-          result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
-            generationConfig
-          });
+          result = await model.generateContent(finalPrompt);
         }
-        
         response = await result.response;
         if (response) break;
       } catch (err) {
         lastError = err;
-        console.error(`Model ${modelName} failed`, err);
+        console.error(`Model ${modelName} failed`);
         continue;
       }
     }
@@ -173,13 +164,12 @@ export default async function handler(req, res) {
       const jsonResponse = JSON.parse(cleanJson);
       return res.status(200).json(jsonResponse);
     } catch (parseError) {
-      console.error("JSON Parse Fail:", text);
-      throw new Error("AI returned invalid JSON structure");
+      throw new Error("No Valid json found");
     }
 
   } catch (error) {
     console.error("API Error:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
-}
+  }
 
